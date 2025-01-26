@@ -1,7 +1,7 @@
 import sys
 import pandas as pd
 from PyQt5.QtWidgets import (
-    QApplication, QWidget, QLabel, QVBoxLayout, QPushButton, QFileDialog
+    QApplication, QWidget, QLabel, QVBoxLayout, QPushButton, QFileDialog, QSpacerItem, QSizePolicy
 )
 from PyQt5.QtCore import Qt
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
@@ -51,6 +51,7 @@ class CSVDragDropApp(QWidget):
         # Matplotlib canvas for plotting
         self.canvas = MatplotlibCanvas(self)
         self.main_layout.addWidget(self.canvas)
+        self.main_layout.addSpacerItem(QSpacerItem(100, 0, QSizePolicy.Minimum, QSizePolicy.Fixed))
 
         # Process button
         self.process_button = QPushButton("Process CSV")
@@ -59,12 +60,6 @@ class CSVDragDropApp(QWidget):
         self.process_button.clicked.connect(self.process_csv)
         self.main_layout.addWidget(self.process_button, alignment=Qt.AlignLeft)
 
-        # Download button
-        self.download_button = QPushButton("Download Processed CSV")
-        self.download_button.setFixedWidth(400)
-        self.download_button.setEnabled(False)
-        self.download_button.clicked.connect(self.download_csv)
-        self.main_layout.addWidget(self.download_button, alignment=Qt.AlignLeft)
 
         self.setLayout(self.main_layout)
 
