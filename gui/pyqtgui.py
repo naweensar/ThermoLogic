@@ -5,6 +5,29 @@ from PyQt5.QtCore import Qt
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 
+import os
+
+from groq import Groq
+
+client = Groq(
+    # This is the default and can be omitted
+    api_key=os.environ["GROQ_API_KEY"]
+)
+
+chat_completion = client.chat.completions.create(
+    messages=[
+        {
+            "role": "system",
+            "content": "just say 'russy is silly boy'."
+        },
+        {
+            "role": "user",
+            "content": "say it",
+        }
+    ],
+    model="llama-3.3-70b-versatile",
+)
+
 
 class MatplotlibCanvas(FigureCanvas):
     def __init__(self, parent=None):
