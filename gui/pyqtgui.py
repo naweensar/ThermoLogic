@@ -15,7 +15,7 @@ client = Groq(
 )
 
 # Load the pre-trained Gradient Boosting model
-model = joblib.load('C:\\Users\\Naween\\PycharmProjects\\ThermoLogic\\models\\OntarioModel.pkl')  # Update with the correct file path to the model
+model = joblib.load('C:\\Users\\ZainP\\Documents\\Qhacks\\ThermoLogic\\models\\OntarioModel.pkl')  # Update with the correct file path to the model
 
 
 class MatplotlibCanvas(FigureCanvas):
@@ -83,7 +83,7 @@ class PredictionApp(QWidget):
         # Logo
         self.logo = QLabel(self)
         self.logo.setGeometry(120, 40, 200, 200)
-        pixmap = QPixmap("C:\\Users\\Naween\\PycharmProjects\\ThermoLogic\\images\\logo.png")
+        pixmap = QPixmap("C:\\Users\\ZainP\\Documents\\Qhacks\\ThermoLogic\\images\\logo.png")
         self.logo.setPixmap(
             pixmap.scaled(200, 200, Qt.KeepAspectRatio, Qt.SmoothTransformation))
 
@@ -146,14 +146,46 @@ class PredictionApp(QWidget):
         self.slider_label.setStyleSheet("font-size: 8px; color: #FFFFFF;")
 
 
+
         # Placeholder for CSV file path
         self.csv_file_path = None
+
+    
 
     def update_slider_label(self):
         """Update the slider label when the slider value changes."""
         value = self.slider.value()
         print(self.slider.value())
         self.slider_label.setText(f"Slider Value: {value}")
+
+    def plot_efficiency_comparison(self):
+        """
+        Plot the `eff` and `effnew` values from the hardcoded CSV file on `self.city_canvas`.
+        """
+        # Path to the hardcoded CSV file
+        csv_file_path = r'C:\Users\ZainP\Documents\Qhacks\ThermoLogic\models\factorydata.csv'
+
+        # Load the CSV file
+        data = pd.read_csv(csv_file_path)
+
+        # Extract `eff` and `effnew` columns
+        eff = data['eff']
+        effnew = data['effnew']
+
+
+        self.city_canvas.axes.clear()
+        self.city_canvas.axes.plot(eff, label='Old Eff', color='Green', linewidth=2)
+        self.city_canvas.axes.plot(effnew, label='New Eff', color="Yellow", linewidth=2)
+        self.city_canvas.axes.set_title("Eff", fontsize=10, pad=0, color="#EEE")
+        self.city_canvas.axes.set_ylim(.5, 1)
+        self.city_canvas.axes.set_xlabel('Increments', color="#CCC")
+        self.city_canvas.axes.set_ylabel('Eff Perent', color="#CCC")
+        self.city_canvas.axes.legend()
+        self.city_canvas.axes.grid(True)
+        self.city_canvas.draw()
+
+
+
 
     def process_and_plot(self, file_path, output_csv, plot_title):
         # Load the CSV file
@@ -194,19 +226,27 @@ class PredictionApp(QWidget):
     def process_csv(self):
         if self.csv_file_path:
             try:
+                # Process and plot the first graph
                 self.process_and_plot(
                     file_path=self.csv_file_path,
                     output_csv="predictions_output.csv",
                     plot_title="Comparison of Actual vs Predicted Energy"
                 )
-                self.output_box2.setText(f"Groq Response:\n{self.talkingWithGrq('C:\\Users\\Naween\\PycharmProjects\\ThermoLogic\\gui\\predictions_output.csv')}")
+
+                # Plot the efficiency comparison graph
+                self.plot_efficiency_comparison()
+
+                # Optional: Update the output box with Groq response
+                file_path = r'C:\Users\ZainP\Documents\Qhacks\ThermoLogic\predictions_output.csv'
+                self.output_box2.setText(f"Groq Response:\n{self.talkingWithGrq(file_path)}")
             except Exception as e:
                 self.output_box.setText(f"Error processing file: {e}")
 
-    def talkingWithGrq(self, file_path):
+
+    def talkingWithGrq(self, filepath):
         # Read the contents of the file
         try:
-            with open(file_path, "r") as f:
+            with open(filepath, "r") as f:
                 csv_contents = f.read()
         except Exception as e:
             return f"Error reading the file: {e}"
