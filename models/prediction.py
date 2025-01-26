@@ -60,14 +60,14 @@ def process_and_plot(file_path, output_csv, plot_title):
 
 # Process and plot for the first file
 process_and_plot(
-    file_path="C:\\Users\\ZainP\\Downloads\\Ontario1DayCSV.csv",  # Update with the correct file path
+    file_path="C:\\Users\\Naween\\PycharmProjects\\ThermoLogic\\models\\Ontario1DayCSV.csv",  # Update with the correct file path
     output_csv="predictions_1day.csv",
     plot_title="Comparison of Actual vs Predicted Energy (File 1)"
 )
 
-# Process and plot for the second file
-process_and_plot(
-    file_path="C:\\Users\\ZainP\\Downloads\\Ontario2DayCSV.csv",  # Update with the correct file path
-    output_csv="predictions_2day.csv",
-    plot_title="Comparison of Actual vs Predicted Energy (File 2)"
-)
+# # Process and plot for the second file
+# process_and_plot(
+#     file_path="C:\\Users\\ZainP\\Downloads\\Ontario2DayCSV.csv",  # Update with the correct file path
+#     output_csv="predictions_2day.csv",
+#     plot_title="Comparison of Actual vs Predicted Energy (File 2)"
+# )
