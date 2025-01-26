@@ -1,29 +1,15 @@
 import sys
+import os
 import pandas as pd
-from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QPushButton, QTextEdit
+import joblib
+import matplotlib.pyplot as plt
+from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QPushButton, QTextEdit, QFileDialog
 from PyQt5.QtCore import Qt
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
-import os
-from groq import Groq
 
-# Initialize the Groq client with your API key
-client = Groq(
-    api_key=os.environ.get("GROQ_API_KEY", "")  # Ensure the environment variable is set
-)
-
-# Get the Groq response
-try:
-    chat_completion = client.chat.completions.create(
-        messages=[
-            {"role": "system", "content": "just say 'russy is silly boy'."},
-            {"role": "user", "content": "say it"}
-        ],
-        model="llama-3.3-70b-versatile",
-    )
-    groq_response = chat_completion["choices"][0]["message"]["content"]
-except Exception as e:
-    groq_response = f"Error fetching Groq response: {e}"
+# Load the pre-trained Gradient Boosting model
+model = joblib.load('C:\\Users\\ZainP\\Documents\\Qhacks\\ThermoLogic\\models\\OntarioModel.pkl')  # Update with the correct file path to the model
 
 
 class MatplotlibCanvas(FigureCanvas):
@@ -35,10 +21,10 @@ class MatplotlibCanvas(FigureCanvas):
         self.setParent(parent)
 
 
-class CSVDragDropApp(QWidget):
+class PredictionApp(QWidget):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("Drag-and-Drop CSV Processor with Custom Layout")
+        self.setWindowTitle("Energy Prediction with CSV Drag-and-Drop")
         self.setGeometry(100, 100, 1800, 1000)  # Set the window size and position
         self.setAcceptDrops(True)  # Enable drag-and-drop functionality
 
@@ -63,11 +49,7 @@ class CSVDragDropApp(QWidget):
 
         # Matplotlib canvas for plotting
         self.canvas = MatplotlibCanvas(self)
-        self.canvas.setGeometry(450, 20, 1315, 350)  # (x, y, width, height)
-
-        # Second Matplotlib canvas for plotting
-        self.canvas2 = MatplotlibCanvas(self)
-        self.canvas2.setGeometry(450, 400, 1315, 350)  # (x, y, width, height)
+        self.canvas.setGeometry(450, 20, 1315, 500)  # (x, y, width, height)
 
         # Output box for displaying model output
         self.output_box = QTextEdit(self)
@@ -75,109 +57,92 @@ class CSVDragDropApp(QWidget):
         self.output_box.setReadOnly(True)  # Make the box read-only
         self.output_box.setStyleSheet('font-size: 14px;')  # Optional styling for text
 
-        # Output box for displaying Groq response
-        self.output_box2 = QTextEdit(self)
-        self.output_box2.setGeometry(450, 770, 1315, 210)  # (x, y, width, height)
-        self.output_box2.setReadOnly(True)  # Make the box read-only
-        self.output_box2.setStyleSheet('font-size: 14px;')  # Optional styling for text
-
-        # Display the Groq response in the second output box
-        self.output_box2.setText(f"Groq Response:\n{groq_response}")
-
-        # Placeholder for CSV file path and processed data
+        # Placeholder for CSV file path
         self.csv_file_path = None
-        self.processed_data = None
 
     def dragEnterEvent(self, event):
-        print("Drag Enter Event Triggered")
         if event.mimeData().hasUrls():
             event.accept()
-            print("Drag Accepted")
         else:
             event.ignore()
-            print("Drag Ignored")
-
-    def dragMoveEvent(self, event):
-        print("Drag Move Event Triggered")
-        if event.mimeData().hasUrls():
-            event.accept()
-            print("Drag Move Accepted")
-        else:
-            event.ignore()
-            print("Drag Move Ignored")
 
     def dropEvent(self, event):
-        print("Drop Event Triggered")
         if event.mimeData().hasUrls():
             file_path = event.mimeData().urls()[0].toLocalFile()
-            print(f"Dropped File Path: {file_path}")
-
             if file_path.lower().endswith('.csv'):
                 self.csv_file_path = file_path
                 self.csvViewer.setText(f"Loaded File: {file_path}")
                 self.process_button.setEnabled(True)
                 event.accept()
-                print("CSV File Accepted")
             else:
                 self.csvViewer.setText("Please drop a valid CSV file!")
                 event.ignore()
-                print("Invalid File Type")
         else:
             event.ignore()
-            print("Drop Ignored")
 
     def process_csv(self):
         if self.csv_file_path:
             try:
-                # Read the CSV file
-                df = pd.read_csv(self.csv_file_path)
-
-                # Example processing: Adding a "Processed" column
-                df["Processed"] = range(1, len(df) + 1)
-                self.processed_data = df
-
-                # Display feedback
-                self.csvViewer.setText("CSV processed successfully! Plotting data...")
-
-                # Display the processed CSV data in the first output box
-                self.output_box.setText("Processed CSV Data:\n" + df.head().to_string())
-
-                # Plot the data
-                self.plot_graph(df)
+                self.process_and_plot(
+                    file_path=self.csv_file_path,
+                    output_csv="predictions_output.csv",
+                    plot_title="Comparison of Actual vs Predicted Energy"
+                )
             except Exception as e:
-                self.csvViewer.setText(f"Error processing file: {e}")
-                print(f"Error: {e}")
-        else:
-            self.csvViewer.setText("No file selected!")
+                self.output_box.setText(f"Error processing file: {e}")
 
-    def plot_graph(self, df):
-        """Plots the graph from the processed CSV."""
+    def process_and_plot(self, file_path, output_csv, plot_title):
+        # Load the CSV file
+        data = pd.read_csv(file_path)
+
+        # Rename columns to match those used during model training
+        data = data.rename(columns={'Sunny Or Cloudy': 'Sunny_Or_Cloudy'})
+
+        # Ensure the data has the correct data types
+        data['Sunny_Or_Cloudy'] = data['Sunny_Or_Cloudy'].astype(float)
+        data['Windy'] = data['Windy'].astype(float)
+
+        # Select only the features used during model training
+        features = ['Value', 'Sunny_Or_Cloudy', 'Windy']
+        X = data[features]
+
+        # Predict the 'Required Energy' for the data
+        predictions = model.predict(X)
+
+        # Extract the actual 'Required Energy' values
+        actual_values = data['Required Energy']
+
+        # Limit the actual values to the first 75
+        limited_actual_values = actual_values[:75]
+
+        # Plot the actual values (first 75) and predictions (all)
         self.canvas.axes.clear()
-
-        # Adjust layout to make borders smaller
-        self.canvas.figure.subplots_adjust(left=0.1, right=0.9, top=0.9, bottom=0.2)
-
-        # Plotting first two numeric columns (example)
-        numeric_cols = df.select_dtypes(include=["number"]).columns
-        if len(numeric_cols) >= 2:
-            x_col = numeric_cols[0]
-            y_col = numeric_cols[1]
-            self.canvas.axes.plot(df[x_col], df[y_col], label=f"{x_col} vs {y_col}")
-            self.canvas.axes.set_xlabel(x_col)
-            self.canvas.axes.set_ylabel(y_col)
-            self.canvas.axes.set_title("CSV Data Plot")
-            self.canvas.axes.legend()
-        else:
-            self.canvas.axes.text(
-                0.5, 0.5, "Not enough numeric columns to plot",
-                fontsize=12, ha='center', transform=self.canvas.axes.transAxes
-            )
-
+        self.canvas.axes.plot(limited_actual_values, label='Actual Energy (First 75)', color='blue', linewidth=2)
+        self.canvas.axes.plot(predictions, label='Predicted Energy (All)', linestyle='dotted', color='orange', linewidth=2)
+        self.canvas.axes.set_title(plot_title)
+        self.canvas.axes.set_xlabel('Time (Index)')
+        self.canvas.axes.set_ylabel('Required Energy')
+        self.canvas.axes.legend()
+        self.canvas.axes.grid(True)
         self.canvas.draw()
+
+        # Save the predictions to a CSV file
+        padded_actual_values = pd.concat(
+            [limited_actual_values, pd.Series([None] * (len(predictions) - len(limited_actual_values)))],
+            ignore_index=True
+        )
+        predicted_df = pd.DataFrame({
+            'Actual Energy (First 75)': padded_actual_values,
+            'Predicted Energy': pd.Series(predictions)
+        })
+        predicted_df.to_csv(output_csv, index=False)
+
+        # Display the processed CSV data in the output box
+        self.output_box.setText(f"Processed and plotted for: {file_path}\nPredictions saved to: {output_csv}")
 
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
-    window = CSVDragDropApp()
+    window = PredictionApp()
     window.show()
     sys.exit(app.exec_())
