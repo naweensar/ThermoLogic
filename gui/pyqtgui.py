@@ -2,8 +2,8 @@ import sys
 import os
 import pandas as pd
 import joblib
-import matplotlib.pyplot as plt
-from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QPushButton, QTextEdit, QLineEdit
+from PyQt5.QtGui import QPixmap, QPainter
+from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QPushButton, QTextEdit, QSlider
 from PyQt5.QtCore import Qt
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
@@ -20,62 +20,156 @@ model = joblib.load('C:\\Users\\Naween\\PycharmProjects\\ThermoLogic\\models\\On
 
 class MatplotlibCanvas(FigureCanvas):
     def __init__(self, parent=None):
-        fig = Figure()
+        fig = Figure(facecolor="#2C2C2C")  # Set the figure background to greyish
         self.axes = fig.add_subplot(111)
+        self.axes.set_facecolor("#383838")  # Set the plot area background to a darker grey
         fig.tight_layout()  # Automatically adjust the plot to fit within the canvas
         super().__init__(fig)
         self.setParent(parent)
+
+    def apply_dark_mode(self):
+        """Apply dark mode settings to the plot."""
+        self.axes.title.set_color("#FFFFFF")  # Set title text color
+        self.axes.xaxis.label.set_color("#FFFFFF")  # Set x-axis label color
+        self.axes.yaxis.label.set_color("#FFFFFF")  # Set y-axis label color
+        self.tick_params(axis='x', colors="#FFFFFF")  # Set x-axis tick colors
+        self.tick_params(axis='y', colors="#FFFFFF")  # Set y-axis tick colors
+        self.axes.grid(color="#444444", linestyle="--", linewidth=0.5)  # Set grid color and style
+        self.figure.patch.set_facecolor("#2C2C2C")  # Ensure figure background is greyish
+        self.draw()
 
 
 class PredictionApp(QWidget):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Energy Prediction with CSV Drag-and-Drop")
-        self.setGeometry(100, 100, 1800, 1000)  # Set the window size and position
+        self.setGeometry(100, 100, 1600, 800)  # Set the window size and position
         self.setAcceptDrops(True)  # Enable drag-and-drop functionality
+
+        # Apply a greyish background and styling for the entire application
+        self.setStyleSheet('''
+            QWidget {
+                background-color: #111111;  /* Greyish background */
+                color: #FFFFFF;            /* White text color */
+                font-family: Arial, sans-serif;
+                font-size: 14px;
+            }
+            QLabel {
+                border: 4px dashed #444444;
+                font-size: 16px;
+                color: #DDDDDD;
+                padding: 10px;
+                border-radius: 8px;
+            }
+            QPushButton {
+                background-color: #444444;
+                color: #FFFFFF;
+                font-size: 16px;
+                border-radius: 8px;
+                padding: 10px;
+            }
+            QPushButton:hover {
+                background-color: #555555;
+            }
+            QTextEdit, QLineEdit {
+                background-color: #383838;
+                color: #FFFFFF;
+                border: 1px solid #555555;
+                border-radius: 8px;
+                padding: 8px;
+            }
+        ''')
+
+        # Logo
+        self.logo = QLabel(self)
+        self.logo.setGeometry(120, 40, 200, 200)
+        pixmap = QPixmap("C:\\Users\\Naween\\PycharmProjects\\ThermoLogic\\images\\logo.png")
+        self.logo.setPixmap(
+            pixmap.scaled(200, 200, Qt.KeepAspectRatio, Qt.SmoothTransformation))
 
         # Drag-and-drop CSV viewer
         self.csvViewer = QLabel(self)
         self.csvViewer.setText('\n\n Drag and drop a CSV file here \n\n')
         self.csvViewer.setAlignment(Qt.AlignCenter)
-        self.csvViewer.setStyleSheet('''
-            QLabel {
-                border: 4px dashed #aaa;
-                font-size: 16px;
-                padding: 10px;
-            }
-        ''')
-        self.csvViewer.setGeometry(20, 20, 400, 200)  # (x, y, width, height)
+        self.csvViewer.setGeometry(20, 270, 400, 200)
 
         # Process button
         self.process_button = QPushButton("Process CSV", self)
-        self.process_button.setGeometry(20, 230, 400, 40)  # (x, y, width, height)
+        self.process_button.setGeometry(20, 500, 400, 40)
         self.process_button.setEnabled(False)
+        self.process_button.setStyleSheet('''
+            QPushButton {
+                background-color: #006400;
+                color: #FFFFFF;
+                font-size: 16px;
+                font-weight: bold;
+                border-radius: 8px;
+                padding: 10px;
+            }
+            QPushButton:hover {
+                background-color: #008000;
+            }
+        ''')
         self.process_button.clicked.connect(self.process_csv)
 
         # Matplotlib canvas for plotting
         self.canvas = MatplotlibCanvas(self)
-        self.canvas.setGeometry(450, 70, 1300, 300)  # (x, y, width, height)
+        self.canvas.setGeometry(450, 20, 1100, 300)
 
         # Second Matplotlib canvas for plotting the city data
         self.city_canvas = MatplotlibCanvas(self)
-        self.city_canvas.setGeometry(450, 380, 1300, 300)  # (x, y, width, height)
+        self.city_canvas.setGeometry(450, 340, 1100, 300)
 
         # Output box for displaying model output
         self.output_box = QTextEdit(self)
-        self.output_box.setGeometry(20, 280, 400, 300)  # (x, y, width, height)
-        self.output_box.setReadOnly(True)  # Make the box read-only
-        self.output_box.setStyleSheet('font-size: 14px;')  # Optional styling for text
+        self.output_box.setGeometry(20, 550, 400, 200)
+        self.output_box.setReadOnly(True)
 
         # Output box for displaying Groq response
         self.output_box2 = QTextEdit(self)
-        self.output_box2.setGeometry(450, 770, 1315, 210)  # (x, y, width, height)
-        self.output_box2.setReadOnly(True)  # Make the box read-only
-        self.output_box2.setStyleSheet('font-size: 14px;')  # Optional styling for text
+        self.output_box2.setGeometry(450, 680, 1100, 100)
+        self.output_box2.setReadOnly(True)
+
+        # Slider for adjusting a parameter
+        self.slider = QSlider(Qt.Horizontal, self)
+        self.slider.setGeometry(550, 650, 400, 30)
+        self.slider.setMinimum(0)
+        self.slider.setMaximum(10)
+        self.slider.setValue(5)  # Initial value
+        self.slider.setTickPosition(QSlider.TicksBelow)
+        self.slider.setTickInterval(1)
+        self.slider.valueChanged.connect(self.update_slider_label)
+
+        # Label for displaying slider value
+        self.slider_label = QLabel(f"Slider Value: {self.slider.value()}", self)
+        self.slider_label.setGeometry(-960, -650, -200, -30)
+        self.slider_label.setStyleSheet("font-size: 8px; color: #FFFFFF;")
+
 
         # Placeholder for CSV file path
         self.csv_file_path = None
 
+    def update_slider_label(self):
+        """Update the slider label when the slider value changes."""
+        value = self.slider.value()
+        print(self.slider.value())
+        self.slider_label.setText(f"Slider Value: {value}")
+
+    def process_and_plot(self, file_path, output_csv, plot_title):
+        # Load the CSV file
+        data = pd.read_csv(file_path)
+
+        # Plot the data with ticks and labels styled for dark mode
+        self.canvas.axes.clear()
+        self.canvas.axes.plot(data['Days'], data['Cost'], label='Cost Over Time', color='Grey', linewidth=2)
+        self.canvas.axes.set_title(plot_title, fontsize=10, pad=10, color="#FFFFFF")
+        self.canvas.axes.set_xlabel('Days', fontsize=10, color="#FFFFFF")
+        self.canvas.axes.set_ylabel('Cost (cents per kWh)', fontsize=10, color="#FFFFFF")
+        self.canvas.tick_params(axis='x', colors="#FFFFFF")
+        self.canvas.tick_params(axis='y', colors="#FFFFFF")
+        self.canvas.axes.grid(color="#444444", linestyle="--", linewidth=0.5)
+        self.canvas.axes.legend(facecolor="#383838", edgecolor="#555555", fontsize=9)
+        self.canvas.apply_dark_mode()
 
     def dragEnterEvent(self, event):
         if event.mimeData().hasUrls():
@@ -157,38 +251,15 @@ class PredictionApp(QWidget):
 
         # Plot the actual values (first 75) and predictions (all)
         self.canvas.axes.clear()
-        self.canvas.axes.plot(limited_actual_values, label='Actual Energy (First 75)', color='blue', linewidth=2)
-        self.canvas.axes.plot(predictions, label='Predicted Energy (All)', linestyle='dotted', color='orange', linewidth=2)
-        self.canvas.axes.set_title(plot_title, fontsize=10, pad=0)
-        self.canvas.axes.set_xlabel('Time (Index)')
-        self.canvas.axes.set_ylabel('Required Energy')
+        self.canvas.axes.plot(predictions, label='Predicted Energy (All)', color='Green', linewidth=2)
+        self.canvas.axes.plot(limited_actual_values, label='Actual Energy (First 75)', linestyle='dotted' , color="White", linewidth=2)
+        self.canvas.axes.set_title(plot_title, fontsize=10, pad=0, color="#EEE")
+        self.canvas.axes.set_xlabel('Time (Index)', color="#CCC")
+        self.canvas.axes.set_ylabel('Required Energy', color="#CCC")
         self.canvas.axes.legend()
-        self.canvas.axes.margins(x=0, y=0)
         self.canvas.axes.grid(True)
         self.canvas.draw()
 
-        # Save the predictions to a CSV file
-        padded_actual_values = pd.concat(
-            [limited_actual_values, pd.Series([None] * (len(predictions) - len(limited_actual_values)))],
-            ignore_index=True
-        )
-        predicted_df = pd.DataFrame({
-            'Actual Energy (First 75)': padded_actual_values,
-            'Predicted Energy': pd.Series(predictions)
-        })
-        predicted_df.to_csv(output_csv, index=False)
-
-        # Display the processed CSV data in the output box
-        self.output_box.setText(f"Processed and plotted for: {file_path}\nPredictions saved to: {output_csv}")
-
-    def plot_graph(self, df):
-        self.canvas.axes.clear()
-        self.canvas.axes.plot(df["Days"], df["Cost"], label="Electricity Cost")
-        self.canvas.axes.set_title("Electricity Cost Over Time", fontsize=10, pad=0)
-        self.canvas.axes.set_xlabel("Days")
-        self.canvas.axes.set_ylabel("Cost (cents per kWh)")
-        self.canvas.axes.legend()
-        self.canvas.draw()
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
