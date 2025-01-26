@@ -1,7 +1,11 @@
 import sys
 import pandas as pd
-from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QVBoxLayout, QPushButton, QFileDialog
+from PyQt5.QtWidgets import (
+    QApplication, QWidget, QLabel, QVBoxLayout, QPushButton, QFileDialog
+)
 from PyQt5.QtCore import Qt
+from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+from matplotlib.figure import Figure
 
 
 class CSVLabel(QLabel):
@@ -16,37 +20,48 @@ class CSVLabel(QLabel):
                 padding: 10px;
             }
         ''')
-        self.setFixedSize(400, 200)  # Set the fixed size for the label
+        self.setFixedSize(400, 200)  # Fixed size for the drag-and-drop area
 
     def setText(self, text):
         super().setText(text)
 
 
+class MatplotlibCanvas(FigureCanvas):
+    def __init__(self, parent=None):
+        fig = Figure()
+        self.axes = fig.add_subplot(111)
+        super().__init__(fig)
+        self.setParent(parent)
+
+
 class CSVDragDropApp(QWidget):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("Drag-and-Drop CSV Processor")
+        self.setWindowTitle("Drag-and-Drop CSV Processor and Graph Plotter")
         self.resize(1420, 800)
         self.setAcceptDrops(True)
 
         # Main layout
         self.main_layout = QVBoxLayout()
-        self.main_layout.setSpacing(0)  # Remove spacing between widgets
-        self.main_layout.setContentsMargins(10, 10, 10, 10)  # Remove top margin to bring widgets closer to the top
 
-        # Drag-and-drop box
+        # Drag-and-drop CSV viewer
         self.csvViewer = CSVLabel()
         self.main_layout.addWidget(self.csvViewer, alignment=Qt.AlignLeft | Qt.AlignTop)
 
-        # Buttons directly under the drag-and-drop box
+        # Matplotlib canvas for plotting
+        self.canvas = MatplotlibCanvas(self)
+        self.main_layout.addWidget(self.canvas)
+
+        # Process button
         self.process_button = QPushButton("Process CSV")
-        self.process_button.setFixedWidth(400)  # Match the width of the CSVLabel
+        self.process_button.setFixedWidth(400)
         self.process_button.setEnabled(False)
         self.process_button.clicked.connect(self.process_csv)
         self.main_layout.addWidget(self.process_button, alignment=Qt.AlignLeft)
 
+        # Download button
         self.download_button = QPushButton("Download Processed CSV")
-        self.download_button.setFixedWidth(400)  # Match the width of the CSVLabel
+        self.download_button.setFixedWidth(400)
         self.download_button.setEnabled(False)
         self.download_button.clicked.connect(self.download_csv)
         self.main_layout.addWidget(self.download_button, alignment=Qt.AlignLeft)
@@ -94,12 +109,36 @@ class CSVDragDropApp(QWidget):
                 self.processed_data = df
 
                 # Display feedback
-                self.csvViewer.setText("CSV processed successfully! You can now download it.")
+                self.csvViewer.setText("CSV processed successfully! Plotting data...")
                 self.download_button.setEnabled(True)
+
+                # Plot the data
+                self.plot_graph(df)
             except Exception as e:
                 self.csvViewer.setText(f"Error processing file: {e}")
         else:
             self.csvViewer.setText("No file selected!")
+
+    def plot_graph(self, df):
+        """Plots the graph from the processed CSV."""
+        self.canvas.axes.clear()
+
+        # Plotting first two numeric columns (example)
+        numeric_cols = df.select_dtypes(include=["number"]).columns
+        if len(numeric_cols) >= 2:
+            x_col = numeric_cols[0]
+            y_col = numeric_cols[1]
+            self.canvas.axes.plot(df[x_col], df[y_col], label=f"{x_col} vs {y_col}")
+            self.canvas.axes.set_xlabel(x_col)
+            self.canvas.axes.set_ylabel(y_col)
+            self.canvas.axes.set_title("CSV Data Plot")
+            self.canvas.axes.legend()
+        else:
+            self.canvas.axes.text(
+                0.5, 0.5, "Not enough numeric columns to plot", fontsize=12, ha='center'
+            )
+
+        self.canvas.draw()
 
     def download_csv(self):
         if self.processed_data is not None:
