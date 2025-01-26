@@ -1,8 +1,7 @@
 import sys
 import pandas as pd
-from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QVBoxLayout, QPushButton, QFileDialog, QHBoxLayout
+from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QVBoxLayout, QPushButton, QFileDialog
 from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QFont
 
 
 class CSVLabel(QLabel):
@@ -32,23 +31,25 @@ class CSVDragDropApp(QWidget):
 
         # Main layout
         self.main_layout = QVBoxLayout()
+        self.main_layout.setSpacing(0)  # Remove spacing between widgets
+        self.main_layout.setContentsMargins(10, 10, 10, 10)  # Remove top margin to bring widgets closer to the top
 
-        # Top-left layout for the drag-and-drop box
-        self.top_left_layout = QHBoxLayout()
+        # Drag-and-drop box
         self.csvViewer = CSVLabel()
-        self.top_left_layout.addWidget(self.csvViewer, alignment=Qt.AlignLeft | Qt.AlignTop)
-        self.main_layout.addLayout(self.top_left_layout)
+        self.main_layout.addWidget(self.csvViewer, alignment=Qt.AlignLeft | Qt.AlignTop)
 
-        # Add buttons at the bottom of the GUI
+        # Buttons directly under the drag-and-drop box
         self.process_button = QPushButton("Process CSV")
+        self.process_button.setFixedWidth(400)  # Match the width of the CSVLabel
         self.process_button.setEnabled(False)
         self.process_button.clicked.connect(self.process_csv)
-        self.main_layout.addWidget(self.process_button)
+        self.main_layout.addWidget(self.process_button, alignment=Qt.AlignLeft)
 
         self.download_button = QPushButton("Download Processed CSV")
+        self.download_button.setFixedWidth(400)  # Match the width of the CSVLabel
         self.download_button.setEnabled(False)
         self.download_button.clicked.connect(self.download_csv)
-        self.main_layout.addWidget(self.download_button)
+        self.main_layout.addWidget(self.download_button, alignment=Qt.AlignLeft)
 
         self.setLayout(self.main_layout)
 
