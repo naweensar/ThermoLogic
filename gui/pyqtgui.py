@@ -1,29 +1,9 @@
 import sys
 import pandas as pd
-from PyQt5.QtWidgets import (
-    QApplication, QWidget, QLabel, QVBoxLayout, QPushButton, QFileDialog, QSpacerItem, QSizePolicy
-)
+from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QPushButton, QFileDialog
 from PyQt5.QtCore import Qt
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
-
-
-class CSVLabel(QLabel):
-    def __init__(self):
-        super().__init__()
-        self.setAlignment(Qt.AlignCenter)
-        self.setText('\n\n Drag and drop a CSV file here \n\n')
-        self.setStyleSheet('''
-            QLabel {
-                border: 4px dashed #aaa;
-                font-size: 16px;
-                padding: 10px;
-            }
-        ''')
-        self.setFixedSize(400, 200)  # Fixed size for the drag-and-drop area
-
-    def setText(self, text):
-        super().setText(text)
 
 
 class MatplotlibCanvas(FigureCanvas):
@@ -37,31 +17,35 @@ class MatplotlibCanvas(FigureCanvas):
 class CSVDragDropApp(QWidget):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("Drag-and-Drop CSV Processor and Graph Plotter")
-        self.resize(1420, 800)
-        self.setAcceptDrops(True)
-
-        # Main layout
-        self.main_layout = QVBoxLayout()
+        self.setWindowTitle("Drag-and-Drop CSV Processor with Custom Layout")
+        self.setGeometry(100, 100, 1800, 1000)  # Set the window size and position
 
         # Drag-and-drop CSV viewer
-        self.csvViewer = CSVLabel()
-        self.main_layout.addWidget(self.csvViewer, alignment=Qt.AlignLeft | Qt.AlignTop)
+        self.csvViewer = QLabel(self)
+        self.csvViewer.setText('\n\n Drag and drop a CSV file here \n\n')
+        self.csvViewer.setAlignment(Qt.AlignCenter)
+        self.csvViewer.setStyleSheet('''
+            QLabel {
+                border: 4px dashed #aaa;
+                font-size: 16px;
+                padding: 10px;
+            }
+        ''')
+        self.csvViewer.setGeometry(20, 20, 400, 200)  # (x, y, width, height)
+
+        # Process button
+        self.process_button = QPushButton("Process CSV", self)
+        self.process_button.setGeometry(20, 230, 400, 40)  # (x, y, width, height)
+        self.process_button.setEnabled(False)
+        self.process_button.clicked.connect(self.process_csv)
 
         # Matplotlib canvas for plotting
         self.canvas = MatplotlibCanvas(self)
-        self.main_layout.addWidget(self.canvas)
-        self.main_layout.addSpacerItem(QSpacerItem(100, 0, QSizePolicy.Minimum, QSizePolicy.Fixed))
+        self.canvas.setGeometry(450, 20, 1315, 350)  # (x, y, width, height)
 
-        # Process button
-        self.process_button = QPushButton("Process CSV")
-        self.process_button.setFixedWidth(400)
-        self.process_button.setEnabled(False)
-        self.process_button.clicked.connect(self.process_csv)
-        self.main_layout.addWidget(self.process_button, alignment=Qt.AlignLeft)
-
-
-        self.setLayout(self.main_layout)
+        # SECOND Matplotlib canvas for plotting
+        self.canvas2 = MatplotlibCanvas(self)
+        self.canvas2.setGeometry(450, 400, 1315, 350)  # (x, y, width, height)
 
         # Placeholder for CSV file path and processed data
         self.csv_file_path = None
@@ -105,7 +89,6 @@ class CSVDragDropApp(QWidget):
 
                 # Display feedback
                 self.csvViewer.setText("CSV processed successfully! Plotting data...")
-                self.download_button.setEnabled(True)
 
                 # Plot the data
                 self.plot_graph(df)
@@ -130,22 +113,11 @@ class CSVDragDropApp(QWidget):
             self.canvas.axes.legend()
         else:
             self.canvas.axes.text(
-                0.5, 0.5, "Not enough numeric columns to plot", fontsize=12, ha='center'
+                0.5, 0.5, "Not enough numeric columns to plot",
+                fontsize=12, ha='center', transform=self.canvas.axes.transAxes
             )
 
         self.canvas.draw()
-
-    def download_csv(self):
-        if self.processed_data is not None:
-            save_path, _ = QFileDialog.getSaveFileName(self, "Save Processed CSV", "", "CSV Files (*.csv)")
-            if save_path:
-                try:
-                    self.processed_data.to_csv(save_path, index=False)
-                    self.csvViewer.setText(f"Processed CSV saved successfully at: {save_path}")
-                except Exception as e:
-                    self.csvViewer.setText(f"Error saving file: {e}")
-        else:
-            self.csvViewer.setText("No processed data to save!")
 
 
 if __name__ == "__main__":
