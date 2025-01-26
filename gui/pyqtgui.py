@@ -10,6 +10,7 @@ class MatplotlibCanvas(FigureCanvas):
     def __init__(self, parent=None):
         fig = Figure()
         self.axes = fig.add_subplot(111)
+        fig.tight_layout()  # Automatically adjust the plot to fit within the canvas
         super().__init__(fig)
         self.setParent(parent)
 
@@ -100,6 +101,9 @@ class CSVDragDropApp(QWidget):
     def plot_graph(self, df):
         """Plots the graph from the processed CSV."""
         self.canvas.axes.clear()
+
+        # Adjust layout to make borders smaller
+        self.canvas.figure.subplots_adjust(left=0, right=0.1, top=0.1, bottom=0.1)
 
         # Plotting first two numeric columns (example)
         numeric_cols = df.select_dtypes(include=["number"]).columns
