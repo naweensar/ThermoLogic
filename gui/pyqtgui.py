@@ -1,6 +1,6 @@
 import sys
 import pandas as pd
-from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QPushButton, QFileDialog
+from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QPushButton, QFileDialog, QTextEdit
 from PyQt5.QtCore import Qt
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
@@ -48,6 +48,18 @@ class CSVDragDropApp(QWidget):
         self.canvas2 = MatplotlibCanvas(self)
         self.canvas2.setGeometry(450, 400, 1315, 350)  # (x, y, width, height)
 
+        # Output box for displaying model output
+        self.output_box = QTextEdit(self)
+        self.output_box.setGeometry(20, 280, 400, 700)  # (x, y, width, height)
+        self.output_box.setReadOnly(True)  # Make the box read-only
+        self.output_box.setStyleSheet('font-size: 14px;')  # Optional styling for text
+
+        # Output box for displaying model output
+        self.output_box2 = QTextEdit(self)
+        self.output_box2.setGeometry(450, 770, 1315, 210)  # (x, y, width, height)
+        self.output_box2.setReadOnly(True)  # Make the box read-only
+        self.output_box2.setStyleSheet('font-size: 14px;')  # Optional styling for text
+
         # Placeholder for CSV file path and processed data
         self.csv_file_path = None
         self.processed_data = None
@@ -91,6 +103,12 @@ class CSVDragDropApp(QWidget):
                 # Display feedback
                 self.csvViewer.setText("CSV processed successfully! Plotting data...")
 
+                # Display the model's output in the output box
+                self.output_box.setText("Model Output:\n" + df.head().to_string())
+
+                # Display the model's output in the output box
+                self.output_box2.setText("Model Output:\n" + df.head().to_string())
+
                 # Plot the data
                 self.plot_graph(df)
             except Exception as e:
@@ -103,7 +121,7 @@ class CSVDragDropApp(QWidget):
         self.canvas.axes.clear()
 
         # Adjust layout to make borders smaller
-        self.canvas.figure.subplots_adjust(left=0, right=0.1, top=0.1, bottom=0.1)
+        self.canvas.figure.subplots_adjust(left=0.1, right=0.9, top=0.9, bottom=0.2)
 
         # Plotting first two numeric columns (example)
         numeric_cols = df.select_dtypes(include=["number"]).columns
